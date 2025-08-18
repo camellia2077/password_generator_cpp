@@ -12,7 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # 1. Create a library from the shared utility files located in the src directory.
-add_library(password_lib src/password_utils.cpp)
+# THIS LINE IS THE FIX -> Added src/cmd_parser.cpp
+add_library(password_lib src/password_utils.cpp src/cmd_parser.cpp)
 
 # 2. Add the executable for the program that uses the seeded engine.
 add_executable(generator_with_seed src/main_seeded.cpp)
