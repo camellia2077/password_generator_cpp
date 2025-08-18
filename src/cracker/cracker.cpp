@@ -9,13 +9,14 @@
 #include <thread>    // For std::thread
 #include <atomic>    // For std::atomic_bool to safely share state
 #include <mutex>     // For std::mutex to protect shared counter
-
+#include <cmath>     // For fmod to handle floating-point division
 // --- Shared Constants & Globals ---
 // "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 // "!@#$%^&*()_+-=[]{}|;:',.<>/?"
+// 
 const std::string ALL_CHARS =
-    "abcdefghijklmnopqrstuvwxyz"
     
+    "abcdefghijklmnopqrstuvwxyz"
     "0123456789";
     
 std::atomic<bool> password_found(false); // Atomic flag to signal all threads to stop
@@ -79,6 +80,11 @@ int main(int argc, char* argv[]) {
     }
 
     std::string target_password = argv[1];
+    if (target_password.empty()) {
+        std::cerr << "Error: Cannot crack an empty password." << std::endl;
+        return 1;
+    }
+
     std::cout << "Attempting to crack password: '" << target_password << "'" << std::endl;
 
     // Determine the optimal number of threads (usually the number of CPU cores)
@@ -92,7 +98,8 @@ int main(int argc, char* argv[]) {
 
     // --- Thread Creation and Workload Distribution ---
     std::vector<std::thread> threads;
-    int chars_per_thread = (ALL_CHARS.length() + num_threads - 1) / num_threads; // Ceiling division
+    // Ceiling division to ensure all characters are covered
+    int chars_per_thread = (ALL_CHARS.length() + num_threads - 1) / num_threads;
 
     for (unsigned int i = 0; i < num_threads; ++i) {
         int start_char_index = i * chars_per_thread;
@@ -112,15 +119,30 @@ int main(int argc, char* argv[]) {
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed_time = end_time - start_time;
 
+    // --- MODIFIED SECTION: Time Formatting ---
+    double total_seconds = elapsed_time.count();
+    // Use long long to prevent overflow for very long durations
+    long long total_seconds_int = static_cast<long long>(total_seconds);
+
+    long long hours = total_seconds_int / 3600;
+    long long minutes = (total_seconds_int % 3600) / 60;
+    // Use fmod to get the remainder of a floating-point division
+    double seconds = fmod(total_seconds, 60.0);
+    // --- END OF MODIFIED SECTION ---
+
     std::cout << "\n--------------------" << std::endl;
     if (password_found) {
         std::cout << "Password found!" << std::endl;
+        std::cout << "Password: " << target_password << std::endl;
     } else {
-        std::cout << "Password not found." << std::endl;
+        std::cout << "Password not found. (Ensure it only uses characters from the defined set)" << std::endl;
     }
     
     std::cout << "Total attempts: " << total_attempts << std::endl;
-    std::cout << "Time taken: " << elapsed_time.count() << " seconds." << std::endl;
+    
+    // --- NEW: Display the formatted time ---
+    std::cout << "Time taken: " << hours << " hours, " << minutes << " minutes, " << seconds << " seconds." << std::endl;
+    
     std::cout << "--------------------" << std::endl;
 
     return 0;
