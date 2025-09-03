@@ -12,28 +12,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # 1. Create a library from the shared utility files located in the src directory.
-# THIS LINE IS THE FIX -> Added src/cmd_parser.cpp
 add_library(password_lib src/password_utils.cpp src/cmd_parser.cpp)
 
-# 2. Add the executable for the program that uses the seeded engine.
-add_executable(generator_with_seed src/main_seeded.cpp)
+# 2. Add the executable for the program that uses the device directly.
+add_executable(password_generator_cpp src/main_no_seed.cpp)
 
-# 3. Add the executable for the program that uses the device directly.
-add_executable(generator_no_seed src/main_no_seed.cpp)
+# 3. Link the shared library to the executable.
+target_link_libraries(password_generator_cpp PRIVATE password_lib)
 
-# 4. Link the shared library to BOTH executables.
-target_link_libraries(generator_with_seed PRIVATE password_lib)
-target_link_libraries(generator_no_seed PRIVATE password_lib)
-
-# 5. Add compiler options to all targets for optimization.
-# -Os:         Optimize for size.
-# -flto:       Enable Link-Time Optimization.
+# 4. Add compiler options to all targets for optimization.
+# -Os:         Optimize for size. 
+# -flto:       Enable Link-Time Optimization. 
 # -march=native: Optimize for the specific CPU architecture of the build machine.
 target_compile_options(password_lib PRIVATE -Os -flto -march=native)
-target_compile_options(generator_with_seed PRIVATE -Os -flto -march=native)
-target_compile_options(generator_no_seed PRIVATE -Os -flto -march=native)
+target_compile_options(password_generator_cpp PRIVATE -Os -flto -march=native)
 
-# 6. Add linker options to the final executables.
+# 5. Add linker options to the final executable.
 # -s: Strip all symbol tables.
-target_link_options(generator_with_seed PRIVATE -s)
-target_link_options(generator_no_seed PRIVATE -s)
+target_link_options(password_generator_cpp PRIVATE -s)
