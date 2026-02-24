@@ -1,3 +1,5 @@
 build/
-
+build_*/
 *.exe
+passwords.txt
+src/rust_core/target/

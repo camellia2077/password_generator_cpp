@@ -1,0 +1,18 @@
+[package]
+name = "ps_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "ps_core"
+crate-type = ["staticlib"]
+
+[dependencies]
+rand = "0.8.5"
+
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -11,22 +11,65 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Set the output directory for executables
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# 1. Create a library from the shared utility files located in the src directory.
-add_library(password_lib src/password_utils.cpp src/cmd_parser.cpp)
+add_library(password_app_lib
+    src/cmd_parser.cpp
+    src/core/password_core.cpp
+    src/io/password_file_io.cpp
+    src/presentation/password_app.cpp
+)
+target_include_directories(password_app_lib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# 2. Add the executable for the program that uses the device directly.
-add_executable(password_generator_cpp src/main_no_seed.cpp)
+add_executable(password_generator_cpp src/main.cpp)
+target_link_libraries(password_generator_cpp PRIVATE password_app_lib)
 
-# 3. Link the shared library to the executable.
-target_link_libraries(password_generator_cpp PRIVATE password_lib)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(password_app_lib PRIVATE -Os -flto -march=native)
+    target_compile_options(password_generator_cpp PRIVATE -Os -flto -march=native)
+    target_link_options(password_generator_cpp PRIVATE -s)
+endif()
 
-# 4. Add compiler options to all targets for optimization.
-# -Os:         Optimize for size. 
-# -flto:       Enable Link-Time Optimization. 
-# -march=native: Optimize for the specific CPU architecture of the build machine.
-target_compile_options(password_lib PRIVATE -Os -flto -march=native)
-target_compile_options(password_generator_cpp PRIVATE -Os -flto -march=native)
+if(WIN32)
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(FATAL_ERROR "GNU static mode requires a GNU C++ compiler on Windows.")
+    endif()
 
-# 5. Add linker options to the final executable.
-# -s: Strip all symbol tables.
-target_link_options(password_generator_cpp PRIVATE -s)
+    find_program(CARGO_EXECUTABLE cargo REQUIRED)
+    set(RUST_TARGET x86_64-pc-windows-gnu)
+    set(RUST_CORE_MANIFEST ${CMAKE_SOURCE_DIR}/src/rust_core/Cargo.toml)
+    set(RUST_CORE_STATIC_LIB ${CMAKE_SOURCE_DIR}/src/rust_core/target/${RUST_TARGET}/release/libps_core.a)
+
+    add_custom_command(
+        OUTPUT ${RUST_CORE_STATIC_LIB}
+        COMMAND ${CARGO_EXECUTABLE} build --release --target ${RUST_TARGET} --manifest-path ${RUST_CORE_MANIFEST}
+        DEPENDS
+            ${CMAKE_SOURCE_DIR}/src/rust_core/Cargo.toml
+            ${CMAKE_SOURCE_DIR}/src/rust_core/Cargo.lock
+            ${CMAKE_SOURCE_DIR}/src/rust_core/src/lib.rs
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Building Rust core static library (libps_core.a)"
+        VERBATIM
+    )
+
+    add_custom_target(ps_core_static ALL DEPENDS ${RUST_CORE_STATIC_LIB})
+    add_dependencies(password_app_lib ps_core_static)
+
+    target_link_libraries(password_app_lib PRIVATE ${RUST_CORE_STATIC_LIB} bcrypt ntdll)
+    target_link_options(password_generator_cpp PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
+
+enable_testing()
+add_test(
+    NAME smoke_runtime
+    COMMAND ${CMAKE_COMMAND}
+        -DEXE_PATH=$<TARGET_FILE:password_generator_cpp>
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/tests/smoke
+        -P ${CMAKE_SOURCE_DIR}/tests/smoke_test.cmake
+)
+
+add_test(
+    NAME version_flag
+    COMMAND ${CMAKE_COMMAND}
+        -DEXE_PATH=$<TARGET_FILE:password_generator_cpp>
+        -DEXPECTED_VERSION=0.1.0
+        -P ${CMAKE_SOURCE_DIR}/tests/version_test.cmake
+)

@@ -4,14 +4,23 @@
 #include <stdexcept>
 #include <string>
 
+namespace {
+const char* kProgramVersion = "0.1.0";
+}
+
 void show_usage(const std::string& program_name) {
     // Update the usage text to show the new long options
     std::cerr << "Usage: " << program_name << " [options]\n"
               << "Options:\n"
               << "\t-h, --help\t\tShow this help message\n"
+              << "\t-V, --version\t\tShow version information\n"
               << "\t-n, --num <count>\tNumber of passwords to generate (default: 1)\n"
               << "\t-l, --length <length>\tLength of each password (default: 20)\n"
               << std::endl;
+}
+
+void show_version() {
+    std::cout << "password_generator_cpp " << kProgramVersion << std::endl;
 }
 
 PasswordArgs parse_arguments(int argc, char* argv[]) {
@@ -23,6 +32,9 @@ PasswordArgs parse_arguments(int argc, char* argv[]) {
             if (arg == "-h" || arg == "--help") {
                 args.help_requested = true;
                 return args; // Exit early if help is requested
+            } else if (arg == "-V" || arg == "--version") {
+                args.version_requested = true;
+                return args; // Exit early if version is requested
             } else if (arg == "-n" || arg == "--num") { // Add check for --num
                 if (i + 1 < argc) {
                     args.count = std::stoi(argv[++i]);
@@ -36,6 +48,8 @@ PasswordArgs parse_arguments(int argc, char* argv[]) {
                 } else {
                     throw std::runtime_error("Error: " + arg + " option requires one argument.");
                 }
+            } else {
+                throw std::runtime_error("Error: Unknown option: " + arg);
             }
         }
     } catch (const std::invalid_argument& e) {

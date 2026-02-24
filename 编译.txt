@@ -1,1 +1,2 @@
-g++ password_generator.cpp -o password_generator.exe -std=c++23 -O3
+cmake -S . -B build
+cmake --build build

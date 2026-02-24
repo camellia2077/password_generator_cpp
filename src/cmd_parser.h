@@ -11,6 +11,7 @@ struct PasswordArgs {
     int count = 1;      // Number of passwords to generate
     int length = 20;    // Length of each password
     bool help_requested = false; // Flag if the user asked for help
+    bool version_requested = false; // Flag if the user asked for version
 };
 
 /**
@@ -27,5 +28,10 @@ PasswordArgs parse_arguments(int argc, char* argv[]);
  * * @param program_name The name of the executable (argv[0]).
  */
 void show_usage(const std::string& program_name);
+
+/**
+ * @brief Prints program version.
+ */
+void show_version();
 
 #endif // CMD_PARSER_H
